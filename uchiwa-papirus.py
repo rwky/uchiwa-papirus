@@ -14,6 +14,7 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
+import socket
 import urllib.request
 import json
 import os
@@ -53,5 +54,13 @@ if warn ==0 and critical == 0 and unknown == 0:
 else:
     text.AddText('%d CRIT\n%d WARN\n%d UNKN' % (critical, warn, unknown), 0, 20, size=50)
 
+
+# add the current time, means I can check at a glance if it's working
 text.AddText(str(datetime.now().time()), 0, 0, size=20)
+
+# I keep forgetting the IP get it and display it
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(('192.168.1.1', 80))
+text.AddText(str(s.getsockname()[0]), 0, 20, size=20)
+
 text.WriteAll()
