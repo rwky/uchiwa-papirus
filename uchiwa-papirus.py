@@ -29,38 +29,41 @@ realm = os.environ['AUTH_REALM']
 authHandler = urllib.request.HTTPBasicAuthHandler()
 authHandler.add_password(realm=realm, uri=url, user=user, passwd=passwd)
 
-opener = urllib.request.build_opener(authHandler)
-
-urllib.request.install_opener(opener)
-response = urllib.request.urlopen(url).read()
-data = json.loads(response.decode('utf-8'))
-
+text = PapirusTextPos(False, rotation=180)
 warn = 0
 critical = 0
 unknown = 0
 
-for item in data:
-    if item['check']['status'] > 2:
-        unknown += 1
-    elif item['check']['status'] == 2:
-        critical += 1
-    elif item['check']['status'] == 1:
-        warn += 1
+def writeStatus(txt, x_offset, y_offset, size):
+    text.AddText(txt, x_offset, y_offset, size=size)
 
-text = PapirusTextPos(False, rotation=180)
+    # add the current time, means I can check at a glance if it's working
+    text.AddText(str(datetime.now().time()), 0, 0, size=20)
 
-if warn ==0 and critical == 0 and unknown == 0:
-    text.AddText('OK', 0, 20, size=180)
-else:
-    text.AddText('%d CRIT\n%d WARN\n%d UNKN' % (critical, warn, unknown), 0, 20, size=50)
+    # I keep forgetting the IP get it and display it
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(('192.168.1.1', 80))
+    text.AddText(str(s.getsockname()[0]), 0, 20, size=20)
 
+    text.WriteAll()
 
-# add the current time, means I can check at a glance if it's working
-text.AddText(str(datetime.now().time()), 0, 0, size=20)
+try:
+    opener = urllib.request.build_opener(authHandler)
+    urllib.request.install_opener(opener)
+    response = urllib.request.urlopen(url).read()
+    data = json.loads(response.decode('utf-8'))
 
-# I keep forgetting the IP get it and display it
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-s.connect(('192.168.1.1', 80))
-text.AddText(str(s.getsockname()[0]), 0, 20, size=20)
-
-text.WriteAll()
+    for item in data:
+        if item['check']['status'] > 2:
+            unknown += 1
+        elif item['check']['status'] == 2:
+            critical += 1
+        elif item['check']['status'] == 1:
+            warn += 1
+    if warn == 0 and critical == 0 and unknown == 0:
+        writeStatus('OK', 0, 20, size=180)
+    else:
+        writeStatus('%d CRIT\n%d WARN\n%d UNKN' % (critical, warn, unknown), 0, 35, size=45)
+except Exception as e:
+    writeStatus('ERR', 0, 20, size=140)
+    raise e
